@@ -1,4 +1,6 @@
 defmodule Issues.CLI do
+  import Issues.TableFormatter, only: [print_table_for_columns: 2]
+
   @default_count 4
 
   @moduledoc """
@@ -7,7 +9,7 @@ defmodule Issues.CLI do
   table of the last _n_ issues in a github project
   """
 
-  def run(argv) do
+  def main(argv) do
     argv
     |> parse_args
     |> process
@@ -44,44 +46,52 @@ defmodule Issues.CLI do
     |> decode_response
     |> sort_into_ascending_order
     |> Enum.take(count)
-    |> Enum.map(fn issue -> %{"id" => Integer.to_string(issue["id"]), "created_at" => issue["created_at"], "title" => issue["title"]} end)
-    |> _maxes
-    |> _print_it
+    |> print_table_for_columns(["number", "created_at", "title"])
   end
 
-  defp _max(a, b), do: if (a >= b), do: a, else: b
-  defp _maxes(issues) do
-    maxWidths = Enum.reduce(issues, %{"id" => 0, "created_at" => 0, "title" => 0}, fn(issue, widths) ->
-      %{
-        "id" => _max(widths["id"], String.length(issue["id"])),
-        "created_at" => _max(widths["created_at"], String.length(issue["created_at"])),
-        "title" => _max(widths["title"], String.length(issue["title"]))
-      }
-    end)
-    {maxWidths, issues}
-  end
-
-  defp _print_it({maxes, issues}) do
-    _print_line([%{data: "id", width: maxes["id"]}, %{data: "created_at", width: maxes["created_at"]}, %{data: "title", width: maxes["title"]}])
-    _print_line([%{data: "", width: maxes["id"]}, %{data: "", width: maxes["created_at"]}, %{data: "", width: maxes["title"]}], "-", "-+-")
-    _print_lines(issues, maxes)
-  end
-
-  defp _print_lines([line | lines], maxes) do
-    _print_line([%{data: line["id"], width: maxes["id"]}, %{data: line["created_at"], width: maxes["created_at"]}, %{data: line["title"], width: maxes["title"]}])
-    _print_line([%{data: "", width: maxes["id"]}, %{data: "", width: maxes["created_at"]}, %{data: "", width: maxes["title"]}], "-", "-+-")
-    if (length(lines) > 0), do: _print_lines(lines, maxes)
-  end
-
-  defp _print_line([cell | cells], spacer \\ " ", delimiter \\ " | ") do
-    IO.write "#{String.pad_leading(cell.data, cell.width, spacer)}"
-    if (length(cells) > 0) do
-      IO.write delimiter
-      _print_line(cells, spacer, delimiter)
-    else
-      IO.puts ""
-    end
-  end
+#   def process({user, project, count}) do
+#     Issues.GithubIssues.fetch(user, project)
+#     |> decode_response
+#     |> sort_into_ascending_order
+#     |> Enum.take(count)
+#     |> Enum.map(fn issue -> %{"id" => Integer.to_string(issue["id"]), "created_at" => issue["created_at"], "title" => issue["title"]} end)
+#     |> _maxes
+#     |> _print_it
+#   end
+#
+#   defp _max(a, b), do: if (a >= b), do: a, else: b
+#   defp _maxes(issues) do
+#     maxWidths = Enum.reduce(issues, %{"id" => 0, "created_at" => 0, "title" => 0}, fn(issue, widths) ->
+#       %{
+#         "id" => _max(widths["id"], String.length(issue["id"])),
+#         "created_at" => _max(widths["created_at"], String.length(issue["created_at"])),
+#         "title" => _max(widths["title"], String.length(issue["title"]))
+#       }
+#     end)
+#     {maxWidths, issues}
+#   end
+#
+#   defp _print_it({maxes, issues}) do
+#     _print_line([%{data: "id", width: maxes["id"]}, %{data: "created_at", width: maxes["created_at"]}, %{data: "title", width: maxes["title"]}])
+#     _print_line([%{data: "", width: maxes["id"]}, %{data: "", width: maxes["created_at"]}, %{data: "", width: maxes["title"]}], "-", "-+-")
+#     _print_lines(issues, maxes)
+#   end
+#
+#   defp _print_lines([line | lines], maxes) do
+#     _print_line([%{data: line["id"], width: maxes["id"]}, %{data: line["created_at"], width: maxes["created_at"]}, %{data: line["title"], width: maxes["title"]}])
+#     _print_line([%{data: "", width: maxes["id"]}, %{data: "", width: maxes["created_at"]}, %{data: "", width: maxes["title"]}], "-", "-+-")
+#     if (length(lines) > 0), do: _print_lines(lines, maxes)
+#   end
+#
+#   defp _print_line([cell | cells], spacer \\ " ", delimiter \\ " | ") do
+#     IO.write "#{String.pad_leading(cell.data, cell.width, spacer)}"
+#     if (length(cells) > 0) do
+#       IO.write delimiter
+#       _print_line(cells, spacer, delimiter)
+#     else
+#       IO.puts ""
+#     end
+#   end
 
   def decode_response({:ok, body}), do: body
   def decode_response({:error, error}) do
